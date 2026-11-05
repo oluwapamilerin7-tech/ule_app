@@ -103,8 +103,8 @@ export const Api = {
     api<Session>('/auth/login', { method: 'POST', body: { username, password }, anonymous: true }),
   logout: () => api<void>('/auth/logout', { method: 'POST' }),
   forgotPassword: (email: string) => api<void>('/auth/forgot-password', { method: 'POST', body: { email }, anonymous: true }),
-  resetPassword: (token: string, password: string) =>
-    api<Session>('/auth/reset-password', { method: 'POST', body: { token, password }, anonymous: true }),
+  resetPassword: (email: string, code: string, password: string) =>
+    api<Session>('/auth/reset-password', { method: 'POST', body: { email, code, password }, anonymous: true }),
   me: () => api<{ user: ApiUser; households: ApiMembershipSummary[]; administering: ApiAdministering }>('/auth/me'),
   /** "All households": today's tasks for me in every household, labelled (H02). */
   meToday: () =>

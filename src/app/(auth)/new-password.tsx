@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
@@ -8,7 +8,6 @@ import { StrengthMeter } from '@/components/strength-meter';
 import { Button } from '@/components/ui/button';
 import { InfoNote } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
-import { Logo } from '@/components/ui/logo';
 import { BackButton, PageTitle, Screen, Spacer } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { TextField } from '@/components/ui/text-field';
@@ -17,35 +16,43 @@ import { enterApp, enterOnboarding } from '@/lib/navigation';
 import { useHousehold } from '@/state/household';
 import { currentUser } from '@/state/selectors';
 
-/** Pulls the reset token out of a pasted link ("…new-password?token=abc") or takes it as-is. */
-function tokenFrom(input: string) {
-  const match = /[?&]token=([^&\s]+)/.exec(input);
-  return decodeURIComponent(match ? match[1] : input.trim());
-}
+const RESEND_AFTER = 45;
 
 /**
- * Three ways in:
- * - the reset email's link (`/new-password?token=…`),
- * - "I have the link" after asking for one (paste the link),
+ * Two ways in:
+ * - Forgot password (`?email=…`): enter the 6-digit code from the email and a new password,
  * - Settings › Change password (`?from=settings`).
  */
 export default function NewPasswordScreen() {
-  const params = useLocalSearchParams<{ from?: string; token?: string }>();
+  const params = useLocalSearchParams<{ from?: string; email?: string }>();
   const { state, actions } = useHousehold();
   const fromSettings = params.from === 'settings';
-  const [pasted, setPasted] = useState('');
+  const email = params.email ?? '';
+  const [code, setCode] = useState('');
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(RESEND_AFTER);
+
+  useEffect(() => {
+    if (fromSettings || secondsLeft <= 0) return;
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [fromSettings, secondsLeft]);
 
   const matches = confirm.length > 0 && confirm === password;
-  const token = params.token ?? (pasted ? tokenFrom(pasted) : '');
   const needsCurrent = fromSettings && state.hasPassword;
   const username = currentUser(state)?.username;
   const canSave =
-    isValidPassword(password) && matches && !busy && (fromSettings ? !needsCurrent || current.length > 0 : token.length >= 20);
+    isValidPassword(password) && matches && !busy && (fromSettings ? !needsCurrent || current.length > 0 : /^\d{6}$/.test(code));
+
+  const resend = () => {
+    setSecondsLeft(RESEND_AFTER);
+    setCode('');
+    void Api.forgotPassword(email).catch(() => {});
+  };
 
   const save = async () => {
     setBusy(true);
@@ -56,7 +63,7 @@ export default function NewPasswordScreen() {
         router.back();
         return;
       }
-      const where = await actions.completePasswordReset(token, password);
+      const where = await actions.completePasswordReset(email, code, password);
       if (where === 'noHousehold') enterOnboarding();
       else enterApp();
     } catch (failure) {
@@ -68,30 +75,40 @@ export default function NewPasswordScreen() {
 
   return (
     <Screen gap={22}>
-      {fromSettings ? (
-        <View style={styles.back}>
-          <BackButton fallback="/household/settings" />
-        </View>
-      ) : (
-        <View style={styles.logo}>
-          <Logo size={22} />
-        </View>
-      )}
+      <View style={styles.back}>
+        <BackButton fallback={fromSettings ? '/household/settings' : '/forgot-password'} />
+      </View>
       <PageTitle
         title={fromSettings ? 'Change password' : 'Set a new password'}
-        subtitle={`${username ? `For ${username}. ` : ''}You'll be signed out on other devices.`}
+        subtitle={
+          fromSettings
+            ? `${username ? `For ${username}. ` : ''}You'll be signed out on other devices.`
+            : `We sent a 6-digit code to ${email || 'your email'}. It expires in 15 minutes. You'll be signed out on other devices.`
+        }
       />
       <View style={styles.form}>
-        {!fromSettings && !params.token ? (
-          <TextField
-            label="Reset link from the email"
-            value={pasted}
-            onChangeText={setPasted}
-            placeholder="Paste the link or code"
-            autoCapitalize="none"
-            autoCorrect={false}
-            hint="Copy the link from the email and paste it here."
-          />
+        {!fromSettings ? (
+          <View style={styles.codeBlock}>
+            <TextField
+              label="6-digit code"
+              value={code}
+              onChangeText={(text) => setCode(text.replace(/\D/g, '').slice(0, 6))}
+              placeholder="123456"
+              autoFocus
+              keyboardType="number-pad"
+              maxLength={6}
+              autoComplete="one-time-code"
+              textContentType="oneTimeCode"
+              hint="Check your spam folder if it isn't in your inbox."
+            />
+            <Button
+              label={secondsLeft > 0 ? `Resend code in 0:${String(secondsLeft).padStart(2, '0')}` : 'Resend code'}
+              variant="ghost"
+              size="sm"
+              disabled={secondsLeft > 0 || !email}
+              onPress={resend}
+            />
+          </View>
         ) : null}
         {needsCurrent ? (
           <TextField
@@ -108,7 +125,6 @@ export default function NewPasswordScreen() {
           value={password}
           onChangeText={setPassword}
           password
-          autoFocus={!!params.token}
           autoComplete="new-password"
           textContentType="newPassword"
           hint={
@@ -157,10 +173,9 @@ const styles = StyleSheet.create({
   back: {
     alignItems: 'flex-start',
   },
-  logo: {
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
+  codeBlock: {
+    gap: 4,
+    alignItems: 'stretch',
   },
   form: {
     gap: 16,

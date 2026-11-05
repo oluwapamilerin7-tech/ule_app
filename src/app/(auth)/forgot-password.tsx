@@ -22,7 +22,7 @@ export default function ForgotPasswordScreen() {
     setError(null);
     try {
       await Api.forgotPassword(email.trim());
-      router.push({ pathname: '/check-email', params: { email: email.trim() } });
+      router.push({ pathname: '/new-password', params: { email: email.trim() } });
     } catch (failure) {
       setError(errorMessage(failure));
     } finally {
@@ -37,7 +37,7 @@ export default function ForgotPasswordScreen() {
       </View>
       <PageTitle
         title="Forgot your password?"
-        subtitle="Enter the email on your account and we'll send you a link to reset your password."
+        subtitle="Enter the email on your account and we'll send you a 6-digit code to reset your password."
       />
       <TextField
         label="Email"
@@ -64,7 +64,7 @@ export default function ForgotPasswordScreen() {
           {error}
         </Text>
       ) : null}
-      <Button label={busy ? 'Sending…' : 'Send reset link'} disabled={busy || !isValidEmail(email)} onPress={send} />
+      <Button label={busy ? 'Sending…' : 'Send code'} disabled={busy || !isValidEmail(email)} onPress={send} />
     </Screen>
   );
 }

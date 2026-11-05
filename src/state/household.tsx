@@ -397,8 +397,8 @@ export function createActions(store: ReturnType<typeof createStore>) {
       store.reset('noHousehold');
     },
 
-    async completePasswordReset(token: string, password: string) {
-      const session = await Api.resetPassword(token, password);
+    async completePasswordReset(email: string, code: string, password: string) {
+      const session = await Api.resetPassword(email, code, password);
       await auth.save({ accessToken: session.accessToken, refreshToken: session.refreshToken, householdId: null });
       return enter(null);
     },
