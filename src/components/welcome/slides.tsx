@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -59,7 +59,8 @@ type SlidesProps = {
 export function Slides({ step, onNext, onSkip, onPick }: SlidesProps) {
   const copy = COPY[step - 1];
   return (
-    <View style={styles.root}>
+    // Scrolls on short phones so Continue never ends up off-screen; swipes still change slides.
+    <ScrollView contentContainerStyle={styles.root} bounces={false} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Logo size={24} />
         <Pressable accessibilityRole="button" onPress={onSkip} hitSlop={8} style={styles.skip}>
@@ -107,7 +108,7 @@ export function Slides({ step, onNext, onSkip, onPick }: SlidesProps) {
           </Pressable>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -328,7 +329,7 @@ function StockArt() {
 
 const styles = StyleSheet.create({
   root: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 28,

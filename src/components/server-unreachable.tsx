@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { API_URL } from '@/api/config';
@@ -15,7 +15,10 @@ export function ServerUnreachable() {
   const insets = useSafeAreaInsets();
   const { actions } = useHousehold();
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 28 }]}>
+    <ScrollView
+      style={styles.screen}
+      bounces={false}
+      contentContainerStyle={[styles.root, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 28 }]}>
       <Logo size={24} />
       <View style={styles.body}>
         <View style={styles.badge}>
@@ -46,15 +49,18 @@ export function ServerUnreachable() {
           }}
         />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  screen: {
     flex: 1,
-    paddingHorizontal: 24,
     backgroundColor: Palette.background,
+  },
+  root: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
     alignItems: 'center',
   },
   body: {

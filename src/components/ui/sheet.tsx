@@ -125,29 +125,33 @@ type DialogProps = {
 
 /** Centred alert dialog (delete, remove member, sign out, low stock). */
 export function Dialog({ icon, tone = 'danger', title, message, children, onClose = close }: DialogProps) {
+  const insets = useSafeAreaInsets();
   return (
     <View style={styles.root}>
       <Scrim onPress={onClose} />
-      <View style={[styles.dialogArea, styles.passThrough]}>
+      <View style={[styles.dialogArea, styles.passThrough, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
         <Animated.View
           accessibilityViewIsModal
           accessibilityRole="alert"
           entering={FadeInDown.duration(260).easing(EASE_OUT)}
           style={styles.dialog}>
-          <View style={[styles.dialogIcon, tone === 'neutral' && { backgroundColor: Palette.muted }]}>
-            <Icon name={icon} size={22} color={tone === 'danger' ? Palette.danger : Palette.ink} />
-          </View>
-          <Text accessibilityRole="header" display size={22} style={styles.headerTitle}>
-            {title}
-          </Text>
-          {typeof message === 'string' ? (
-            <Text size={14} muted style={styles.message}>
-              {message}
+          {/* Long messages on small phones scroll inside the dialog. */}
+          <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={styles.dialogScroll} contentContainerStyle={styles.dialogContent}>
+            <View style={[styles.dialogIcon, tone === 'neutral' && { backgroundColor: Palette.muted }]}>
+              <Icon name={icon} size={22} color={tone === 'danger' ? Palette.danger : Palette.ink} />
+            </View>
+            <Text accessibilityRole="header" display size={22} style={styles.headerTitle}>
+              {title}
             </Text>
-          ) : (
-            message
-          )}
-          <View style={styles.dialogActions}>{children}</View>
+            {typeof message === 'string' ? (
+              <Text size={14} muted style={styles.message}>
+                {message}
+              </Text>
+            ) : (
+              message
+            )}
+            <View style={styles.dialogActions}>{children}</View>
+          </ScrollView>
         </Animated.View>
       </View>
     </View>
@@ -221,13 +225,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   dialog: {
+    maxHeight: '100%',
     backgroundColor: Palette.surface,
     borderRadius: 24,
+    overflow: 'hidden',
+    boxShadow: '0 24px 60px rgba(47,47,47,0.25)',
+  },
+  dialogScroll: {
+    flexGrow: 0,
+  },
+  dialogContent: {
     paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 16,
     gap: 12,
-    boxShadow: '0 24px 60px rgba(47,47,47,0.25)',
   },
   dialogIcon: {
     width: 48,
